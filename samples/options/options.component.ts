@@ -16,6 +16,7 @@ export class OptionsComponent {
   constructor(public optionServices: OptionsStateService) { }
 
   handleSearch() {
+    console.log('LLEGA AL BUSCAR')
     this.optionServices.setSearch();
   }
 

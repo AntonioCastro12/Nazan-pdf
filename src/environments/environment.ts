@@ -1,12 +1,12 @@
 export const environment = {
   appName: 'reportesadministrativos',
-  production: true,
+  production: false,
   hostname: 'localhost',
-  //host: 'http://localhost',
-  // apiUrl: 'http://localhost:4090',
-  host: 'https://administrativo.impuls.com.mx',
+  host: 'http://localhost',
+  apiUrl: 'http://localhost:3151',
+  // host: 'https://administrativo.impuls.com.mx',
 
-  apiUrl: 'https://administrativoapi.impuls.com.mx',
+  // apiUrl: 'https://administrativoapi.impuls.com.mx',
 
   apiSecurity: 'https://hydra.impuls.com.mx',
   utilityUrl: 'https://utilityapi.impuls.com.mx',

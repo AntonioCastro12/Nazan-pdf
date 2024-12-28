@@ -21,7 +21,6 @@
         "@schematics/angular:guard": {
           "skipTests": true
         },
-        "@schematics/angular:module": {},
         "@schematics/angular:pipe": {
           "skipTests": true
         },
@@ -36,7 +35,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "allowedCommonJsDependencies": ["csv-file-validator"],
+            "allowedCommonJsDependencies": ["file-saver", "pako", "csv-file-validator"],
             "outputPath": "dist/nazan-admin-reports-frontend",
             "index": "src/index.html",
             "main": "src/main.ts",
@@ -78,10 +77,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "nazan-admin-reports-frontend:build:production"
+              "buildTarget": "nazan-admin-reports-frontend:build:production"
             },
             "development": {
-              "browserTarget": "nazan-admin-reports-frontend:build:development"
+              "buildTarget": "nazan-admin-reports-frontend:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -89,7 +88,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "nazan-admin-reports-frontend:build"
+            "buildTarget": "nazan-admin-reports-frontend:build"
           }
         },
         "test": {
@@ -107,6 +106,6 @@
     }
   },
   "cli": {
-    "analytics": "5f5c2eee-ec58-4120-9db9-99a991da4407"
+    "analytics": false
   }
 }

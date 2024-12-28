@@ -5,5 +5,10 @@
     "datatable",
     "descripcion",
     "dias"
-  ]
+  ],
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#492229",
+    "titleBar.activeBackground": "#663039",
+    "titleBar.activeForeground": "#FDFCFC"
+  }
 }

@@ -30,17 +30,19 @@ export class CalcApiService {
     return response$;
   }
 
-  
+
   calcPerzonalizado(dto: personalizadoDTO){
     const url = `${environment.apiUrl}/api/cat-calculator/personalizado`;
     const params: any = {};
-    params['catalogos'] =dto.catalogos;
+    params['catalogos'] = dto.catalogos;
     params['incremento'] = dto.incremento;
     params['base'] = dto.base;
     params['socio'] = dto.socio;
     params['baseI'] = dto.baseI;
     params['socioI'] = dto.socioI;
 
+    console.log('ESTOS SON LOS PARAMETROS')
+    console.log(params)
     let response$: any = this._http.get<any[]>(url, {params});
     return response$;
   }

@@ -11,6 +11,7 @@ import { CalcIncFormsComponent } from './pages/calc-inc-forms/calc-inc-forms.com
 import { CalcIncOptionsComponent } from './pages/calc-inc-options/calc-inc-options.component';
 import { CalcIncListComponent } from './pages/calc-inc-list/calc-inc-list.component';
 import { CalcIncRoutingModule } from './calc-inc-routing.module';
+import { PdfExcelRoutingModule } from '../pdf-generete/pdf-excel/pdf-excel.routing.module';
 
 
 @NgModule({
@@ -28,7 +29,8 @@ import { CalcIncRoutingModule } from './calc-inc-routing.module';
     ReactiveFormsModule,
     CalendarModule,
     CheckboxModule,
-    RadioButtonModule
+    RadioButtonModule,
+    // PdfExcelRoutingModule
   ]
 })
 export class CalcIncModule { }

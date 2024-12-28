@@ -1,8 +1,10 @@
 
 
 export class catActuales {
-  Catalogo: string | null | undefined = null;
-  Id: string | null | undefined = null;
+  // Catalogo: string | null | undefined = null;
+  // Id: string | null | undefined = null;
+  Id_Catalogo	: string | null | undefined = null;
+  Nombre	: string | null | undefined = null;
 }
 
 export class descPred {
@@ -35,7 +37,7 @@ export class predeterminadoResponse {
   Diez?:number
   Veinte?:number
   Treinta?:number
-  
+
   //Faltan los precios con descuento
 }
 

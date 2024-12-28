@@ -58,7 +58,9 @@ export class CalcIncFormsComponent {
     this.getCatalogos();
   }
 
-
+  veDatos(dato:any){
+    console.log(dato)
+  }
 
   TEMPLATE_TXT = {
     labelReturn: 'Volver a usuarios',
@@ -107,54 +109,15 @@ export class CalcIncFormsComponent {
       DISocio: ''
 
     });
-    
+
   }
 
   get fg(): { [key: string]: AbstractControl } {
     return this._taGralStateService.state.form.controls;
   }
 
-  // transformData(data: any[]): any[] {
-  //   return data.map(obj => {
-  //     if (obj.hasOwnProperty('10')) {
-  //       obj['Diez'] = obj['10'];
-  //       delete obj['10'];
-  //     }
-  //     if(obj.hasOwnProperty('20'))
-  //       {
-  //         obj['Veinte'] = obj['20'];
-  //       delete obj['20']; 
-  //       }
-  //     if(obj.hasOwnProperty('30'))
-  //       {
-  //         obj['Treinta'] = obj['30'];
-  //       delete obj['30']; 
-  //       }
-  //     if(obj.hasOwnProperty('40'))
-  //       {
-  //         obj['Cuarenta'] = obj['40'];
-  //       delete obj['40']; 
-  //       }
-  //     if(obj.hasOwnProperty('50'))
-  //       {
-  //         obj['Cincuenta'] = obj['50'];
-  //       delete obj['50']; 
-  //       }
-  //     if(obj.hasOwnProperty('60'))
-  //       {
-  //         obj['Sesenta'] = obj['60'];
-  //       delete obj['60']; 
-  //       }
-  //     if(obj.hasOwnProperty('70'))
-  //       {
-  //         obj['Setenta'] = obj['70'];
-  //       delete obj['70']; 
-  //       }
-        
-  //     return obj;
-  //   });
-  // }
-   
+
+
   transformData(data: any[]): any[] {
     const mapping = {
       '10': 'Diez',
@@ -165,7 +128,7 @@ export class CalcIncFormsComponent {
       '60': 'Sesenta',
       '70': 'Setenta'
     };
-  
+
     return data.map(obj => {
       for (const [key, value] of Object.entries(mapping)) {
         if (obj.hasOwnProperty(key)) {
@@ -176,7 +139,7 @@ export class CalcIncFormsComponent {
       return obj;
     });
   }
-  
+
 
   socioSubmit() {
     this._taGralStateService.state.personalizadoResponse = [];
@@ -184,127 +147,157 @@ export class CalcIncFormsComponent {
     this._taGralStateService.state.isLoadingList = true;
 
     let formItems = this._taGralStateService.state.form.value;
+    console.log('ESTOS SON LOS ITEMS')
+    console.log(formItems)
     const cadenacat = formItems.catalogos.join(',');
-    
 
     switch (this._taGralStateService.state.tipoCalculo) {
-      case 1: //Calculo Predeterminado
-        formItems.incPred.forEach((descuento: any) => {
-          this._taGralStateService.state.headerPredeterminado.push(descuento)
-        });
-        let preItems: predeterminadoDTO = new predeterminadoDTO();
-        let especial = 0;
+        case 1: // Cálculo Predeterminado
+            formItems.incPred.forEach((descuento: any) => {
+                this._taGralStateService.state.headerPredeterminado.push(descuento);
+            });
 
-        for (let i = 0; i < formItems.incPred.length; i++) {
-          if (formItems.incPred[i] === "NI") {
-            especial = 1;
-            formItems.incPred.splice(i, 1); 
-            i--; // Decrementa el índice para verificar el nuevo elemento en la posición actual
-          }
-        }
-        let cadenaNumeros = formItems.incPred.map((num: any) => `[${num}]`).join(',');
+            let preItems: predeterminadoDTO = new predeterminadoDTO();
+            let especial = 0;
 
-        preItems = {
-          catalogos: cadenacat,
-          incremento: cadenaNumeros,
-          cEspecial: especial
-        }
-        console.log("Predeterminado items: ", preItems);
+            for (let i = 0; i < formItems.incPred.length; i++) {
+              if (formItems.incPred[i] === "NI") {
+                console.log('ENCONTRO NI');
+                especial = 1;
+                formItems.incPred.splice(i, 1, 50, 30);
+                i += 1;
+              }
+            }
 
-        this._taServiceApi.calcPredeterminado(preItems).subscribe(
-          {
-            next: (data: any) => {
-              this._taGralStateService.state.predeterminadoResponse = data;
-              console.log("variable state data pred: ", this._taGralStateService.state.predeterminadoResponse);
+            let cadenaNumeros = formItems.incPred.map((num: any) => `[${num}]`).join(',');
 
-              this.transformData(data);
-              console.log('Data transformada:',data)
-            
-            },
-            error: (error: { erros: { message: string | undefined; }; }) => {
-              this._toastr.error('Opps ha ocurrido un error', error.erros.message);
-              console.error(error);
-            },
-            complete: () => {
-              this._taGralStateService.state.isLoadingList = false;
-            },
+            preItems = {
+                catalogos: cadenacat,
+                incremento: cadenaNumeros,
+                cEspecial: especial
+            };
 
-          }
-        );
+            console.log("Enviando datos a calcPredeterminado:", preItems);
 
+            this._taServiceApi.calcPredeterminado(preItems).subscribe({
+                next: (data: any) => {
+                    console.log("Respuesta recibida de calcPredeterminado:", data);
+                    this._taGralStateService.state.predeterminadoResponse = data;
 
+                    this.transformData(data);
+                },
+                error: (error: any) => {
+                    console.error("Error en calcPredeterminado:", error);
+                    this._toastr.error('Opps ha ocurrido un error', error.erros?.message || "Error desconocido");
+                },
+                complete: () => {
+                    this._taGralStateService.state.isLoadingList = false;
+                }
+            });
+            break;
 
-        break;
+        case 2: 
+            let perGralItem: personalizadoDTO = new personalizadoDTO();
+            perGralItem = {
+                catalogos: cadenacat,
+                base: formItems.gralbase,
+                socio: formItems.gralsocio,
+                incremento: 0,
+                baseI: '0',
+                socioI: '0'
+            };
 
-      case 2: //Personalizado General
-        let perGralItem: personalizadoDTO = new personalizadoDTO();
-        perGralItem = {
-          catalogos: cadenacat,
-          base: formItems.gralbase,
-          socio: formItems.gralsocio,
-          incremento: 0,
-          baseI: '0',
-          socioI: '0'
-        }
+            console.log("Enviando datos a calcPerzonalizado (General):", perGralItem);
 
-        this._taServiceApi.calcPerzonalizado(perGralItem).subscribe(
-          {
-            next: (data: any) => {
-              this._taGralStateService.state.personalizadoResponse = data;
-              console.log("predeterminado: ", this._taGralStateService.state.predeterminadoResponse.length);
-            },
-            error: (error: { erros: { message: string | undefined; }; }) => {
-              this._toastr.error('Opps ha ocurrido un error', error.erros.message);
-              console.error(error);
-            },
-            complete: () => {
-              this._taGralStateService.state.isLoadingList = false;
-            },
+            this._taServiceApi.calcPerzonalizado(perGralItem).subscribe({
+                next: (data: any) => {
+                  console.log("Respuesta recibida de calcPerzonalizado (General):", data);
+                  const gralBasePercentage = formItems.gralbase;
+                  const gralSocioPercentage = formItems.gralsocio;
 
-          }
+                  if (Array.isArray(data)) {
+                      data.forEach((item, index) => {
+                          if (item && item.PRICE !== undefined) {
+                              const updatedPrice = item.PRICE * (1 + gralBasePercentage / 100) * (1 + gralSocioPercentage / 100);
+                              item.PRECIO_CALCULADO = Math.ceil(updatedPrice);
+                          } else {
+                              console.warn(`Precio no encontrado o inválido en el índice ${index}:`, item);
+                          }
+                      });
+                  } else if (data && data.PRICE !== undefined) {
+                      const updatedPrice = data.PRICE * (1 + gralBasePercentage / 100) * (1 + gralSocioPercentage / 100);
+                      data.PRECIO_CALCULADO = Math.ceil(updatedPrice);
+                  } else {
+                      console.warn("Precio no encontrado en data o inválido:", data);
+                  }
 
-        );
-        console.log("Perso Gral: ", perGralItem)
-        break;
+                  this._taGralStateService.state.personalizadoResponse = data;
+              },
+                error: (error: any) => {
+                    console.error("Error en calcPerzonalizado (General):", error);
+                    this._toastr.error('Opps ha ocurrido un error', error.erros?.message || "Error desconocido");
+                },
+                complete: () => {
+                    this._taGralStateService.state.isLoadingList = false;
+                }
+            });
+            break;
 
-      case 3: //Personalizado diferenciado
-        console.log("personalizado diferenciado");
-        let perDifItem: personalizadoDTO = new personalizadoDTO();
-        perDifItem = {
-          catalogos: cadenacat,
-          incremento: 1,
-          baseI: formItems.DIBase,
-          socioI: formItems.DISocio,
-          base: formItems.DNBase,
-          socio: formItems.DNSocio
-        }
-        console.log("Perso Diferenciado: ", perDifItem);
+        case 3:
+            let perDifItem: personalizadoDTO = new personalizadoDTO();
+            perDifItem = {
+                catalogos: cadenacat,
+                incremento: 1,
+                baseI: formItems.DIBase,
+                socioI: formItems.DISocio,
+                base: formItems.DNBase,
+                socio: formItems.DNSocio
+            };
 
-        this._taServiceApi.calcPerzonalizado(perDifItem).subscribe(
-          {
+            console.log("Enviando datos a calcPerzonalizado (Diferenciado):", perDifItem);
 
-            next: (data: any) => {
+            this._taServiceApi.calcPerzonalizado(perDifItem).subscribe({
+                next: (data: any) => {
+                  console.log("Respuesta recibida de calcPerzonalizado (Diferenciado):", data);
 
-              this._taGralStateService.state.personalizadoResponse = data;
-              console.log("variable state data perso: ", this._taGralStateService.state.personalizadoResponse);
-            },
-            error: (error: { erros: { message: string | undefined; }; }) => {
-              this._toastr.error('Opps ha ocurrido un error', error.erros.message);
-              console.error(error);
-            },
-            complete: () => {
-              this._taGralStateService.state.isLoadingList = false;
-            },
+                  const baseI = formItems.DIBase;
+                  const socioI = formItems.DISocio;
+                  const baseN = formItems.DNBase;
+                  const socioN = formItems.DNSocio;
 
-          }
-        );
-        break;
+                  if (Array.isArray(data)) {
+                      data.forEach((item, index) => {
+                          if (item && item.PRICE !== undefined) {
+                              let updatedPrice = item.PRICE;
+                                  updatedPrice = updatedPrice * (1 + baseN / 100) * (1 + socioN / 100);
+                              item.PRECIO_CALCULADO = Math.ceil(updatedPrice);
 
-      default:
-        break;
+                          } else {
+                              console.warn(`Precio no encontrado o inválido en el índice ${index}:`, item);
+                          }
+                      });
+                  } else {
+                      console.warn("La respuesta no es un array:", data);
+                  }
+
+                  this._taGralStateService.state.personalizadoResponse = data;
+              },
+                error: (error: any) => {
+                    console.error("Error en calcPerzonalizado (Diferenciado):", error);
+                    this._toastr.error('Opps ha ocurrido un error', error.erros?.message || "Error desconocido");
+                },
+                complete: () => {
+                    this._taGralStateService.state.isLoadingList = false;
+                }
+            });
+            break;
+
+        default:
+            console.warn("Tipo de cálculo no definido:", this._taGralStateService.state.tipoCalculo);
+            break;
     }
+}
 
-  }
 
   onReset() {
     this.onFillForm();
@@ -330,3 +323,4 @@ export class CalcIncFormsComponent {
 
 
 }
+
