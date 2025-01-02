@@ -1,0 +1,94 @@
+<div class="container my-5">
+    <h1 class="text-center text-primary mb-4">Generar PDF con Columna Seleccionada</h1>
+    <h1 class="text-center text-primary mb-4">Plantillas PDF</h1>
+  
+    <div class="row">
+      <!-- Carga de Archivo Excel -->
+      <div class="col-lg-6 col-md-12 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h2 class="h5 text-center text-secondary mb-4">Carga de Archivo Excel</h2>
+            <input
+              type="file"
+              (change)="onExcelFileSelected($event)"
+              class="form-control mb-3"
+              accept=".xlsx, .xls"
+            />
+            <div class="mb-4">
+              <h5 class="text-center text-secondary">Seleccionar Columna para Generar PDF</h5>
+              <div class="d-flex flex-wrap justify-content-center">
+                <button
+                  *ngFor="let col of displayedColumns.slice(1)"
+                  class="btn btn-sm btn-outline-primary m-1 px-3"
+                  (click)="selectColumn(col)"
+                  [class.active]="col === selectedColumn"
+                >
+                  {{ col }}
+                </button>
+              </div>
+            </div>
+            <!-- Tabla dinámica -->
+            <div *ngIf="data.length > 0 && selectedColumn" class="table-responsive mt-3">
+              <table class="table table-bordered table-hover">
+                <thead class="table-primary">
+                  <tr>
+                    <th>CODIGO_INTERNET</th>
+                    <th>{{ selectedColumn }}</th>
+                    <th>Encontrado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of data">
+                    <td>{{ row['CODIGO_INTERNET'] }}</td>
+                    <td>{{ row[selectedColumn] }}</td>
+                    <td>
+                      <span *ngIf="row.Encontrado" class="text-success">✔</span>
+                      <span *ngIf="!row.Encontrado" class="text-danger">✘</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Carga de PDF para preciado -->
+      <div class="col-lg-6 col-md-12 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h2 class="h5 text-center text-secondary mb-4">Carga el catalogo PDF</h2>
+            <input
+              type="file"
+              (change)="onFileSelected($event)"
+              class="form-control mb-3"
+              accept=".pdf"
+            />
+            <div *ngIf="selectedColumn" class="d-flex justify-content-center mb-3">
+              <button
+                (click)="generateColumnPDF()"
+                class="btn btn-outline-primary"
+              >
+                Generar PDF para Columna: {{ selectedColumn }}
+              </button>
+            </div>
+            <!-- Barra de progreso -->
+            <div *ngIf="isDownloading" class="progress mt-3" style="height: 30px;">
+              <div
+                class="progress-bar progress-bar-striped progress-bar-animated"
+                role="progressbar"
+                [style.width.%]="downloadProgress"
+                [attr.aria-valuenow]="downloadProgress"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                style="transition: width 0.5s ease-in-out;"
+              >
+                {{ downloadProgress }}%
+              </div>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  
