@@ -17,7 +17,7 @@ export class PdfExcelComponent {
     'CODIGO_INTERNET',
   //   'Diez',
   //   'Veinte',
-    'Treinta',
+    // 'Treinta',
   //   'Cuarenta',
   //   'Cincuenta',
   //   'Sesenta',
@@ -235,7 +235,7 @@ export class PdfExcelComponent {
 
     this.isDownloading = true;
     this.downloadProgress = 0;
-
+1
     try {
       await this.findAllCodes(this.pdfjsDoc);
 
