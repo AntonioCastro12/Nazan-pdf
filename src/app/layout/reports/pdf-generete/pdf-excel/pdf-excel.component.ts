@@ -4,7 +4,9 @@ import { saveAs } from 'file-saver';
 import * as pdfjsLib from 'pdfjs-dist';
 import * as XLSX from 'xlsx';
 import { PDFDocumentProxy } from 'ngx-extended-pdf-viewer';
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js';
+// import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+// pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
 @Component({
   selector: 'app-pdf-excel',
@@ -36,7 +38,7 @@ export class PdfExcelComponent {
   public selectedCells: { x: number; y: number; page: number }[] = [];
   public currentPage: number = 1;
   private codeCoordsCache: { [codigo: string]: { x: number; y: number; page: number } } = {};
-  private textPositions: { [page: number]: { x: number; y: number }[] } = {};
+  private textPositions: { [page: number]: { x: number; y: number; text:string}[] } = {};
   private pageCodeCount: { [page: number]: number } = {};
 
   @ViewChild('pdfCanvas', { static: false }) pdfCanvas!: ElementRef<HTMLCanvasElement>;
@@ -129,15 +131,19 @@ export class PdfExcelComponent {
 
   isTextPositionOccupied(page: number, x: number, y: number, fontSize: number, tolerance = 1): boolean {
     if (!this.textPositions[page]) return false;
-    return this.textPositions[page].some(
-      (pos) => Math.abs(pos.x - x) < tolerance && Math.abs(pos.y - y) < fontSize
-    );
+    return this.textPositions[page].some((pos) => {
+      const xOverlap = Math.abs(pos.x - x) < tolerance;
+      const yOverlap = Math.abs(pos.y - y) < fontSize;
+      return xOverlap && yOverlap;
+    });
   }
 
-  isAreaFree(page: number, x: number, y: number, fontSize: number): boolean {
-    for (let i = -3; i <= 3; i++) {
-      if (this.isTextPositionOccupied(page, x, y + i, fontSize)) {
-        return false;
+  isAreaFree(page: number, x: number, y: number, fontSize: number, tolerance = 5): boolean {
+    for (let i = -tolerance; i <= tolerance; i++) {
+      for (let j = -tolerance; j <= tolerance; j++) {
+        if (this.isTextPositionOccupied(page, x + j, y + i, fontSize, tolerance)) {
+          return false;
+        }
       }
     }
     return true;
@@ -148,77 +154,88 @@ export class PdfExcelComponent {
     foundCoords: { page: number; x: number; y: number },
     valores: number[],
     config: { margenX: number; margenY: number; espacioEntreLineas: number; tamanioFuente: number }
-  ) {
+) {
     const pages = pdfDoc.getPages();
     if (foundCoords.page < 1 || foundCoords.page > pages.length) {
-      throw new Error(`La página ${foundCoords.page} no existe en el documento PDF.`);
+        throw new Error(`La página ${foundCoords.page} no existe en el documento PDF.`);
     }
 
     const page = pages[foundCoords.page - 1];
-    let yOffset = config.margenY;
     let xOffset = config.margenX;
-
+    let yOffset = config.margenY;
     const drawToRight = this.pageCodeCount[foundCoords.page] >= 4;
 
+    console.log('Estos son los valores', valores)
     for (const valor of valores) {
-      if (valor === undefined || valor === null) continue;
+        if (valor === undefined || valor === null) continue;
 
-      const textToAdd = `$${valor}`;
-      let xPos = foundCoords.x + (drawToRight ? xOffset : config.margenX);
-      let yPos = foundCoords.y - (drawToRight ? 0 : yOffset);
+        let contador = 0;
+        const textToAdd = `$${valor}`;
+        let xPos = foundCoords.x;
+        let yPos = foundCoords.y;
+        const step = config.espacioEntreLineas;
+        const rectWidth = textToAdd.length * config.tamanioFuente * 0.5;
+        const rectHeight = config.tamanioFuente;
 
-      let attempts = 0;
-      let foundPosition = false;
+        const freePos = this.findFreeRectangle(page,textToAdd,foundCoords.page, { x: xPos, y: yPos }, rectWidth, rectHeight);
 
-      while (attempts < 20) {
-        if (this.isAreaFree(foundCoords.page, xPos, yPos, config.tamanioFuente)) {
-          foundPosition = true;
-          break;
+        if (freePos) {
+            page.drawText(textToAdd, {
+                x: freePos.x,
+                y: freePos.y,
+                size: config.tamanioFuente,
+                color: rgb(0, 0, 0),
+            });
+            break;
         }
-
-        if (drawToRight) {
-          xPos += config.espacioEntreLineas;
-        } else {
-          yPos -= config.espacioEntreLineas;
-        }
-        attempts++;
-      }
-
-      if (!foundPosition) {
-        console.warn("No se pudo encontrar un espacio libre para dibujar el texto:", textToAdd);
-        continue;
-      }
-
-      if (textToAdd !== '$undefined') {
-        page.drawText(textToAdd, {
-          x: xPos,
-          y: yPos,
-          size: config.tamanioFuente,
-          color: rgb(0, 0, 0),
-        });
-        if (drawToRight) {
-          xOffset += config.espacioEntreLineas;
-        } else {
-          yOffset += config.espacioEntreLineas;
-        }
-
-        this.positionPrice(foundCoords.page, xPos, yPos, textToAdd);
-      }
     }
+}
+
+findFreeRectangle(pageW:any,text:string,page: number, start: { x: number; y: number }, width: number, height: number): { x: number; y: number } {
+  let rangoYInicio = Math.floor(start.y);
+  let rangoYFin = rangoYInicio + height;
+  let xFinal = start.x;
+  let yFinal = rangoYInicio;
+
+  while (true) {
+      let rangoLibre = true;
+
+      for (let i = 0; i < this.textPositions[page].length; i++) {
+          const pos = this.textPositions[page][i];
+          const posX = pos.x;
+          const posY = pos.y;
+          if (posY >= rangoYInicio && posY < rangoYFin && posX < start.x + width) {
+              rangoLibre = false;
+              break;
+          }
+      }
+
+      if (rangoLibre) {
+          yFinal = rangoYInicio;
+          break;
+      } else {
+          rangoYInicio--;
+          rangoYFin--;
+      }
   }
+
+  return { x: xFinal, y: yFinal };
+}
 
   async isTextPresent(pageNumber: number) {
     const page = await this.pdfjsDoc.getPage(pageNumber);
     const textContent = await page.getTextContent();
 
     if (!this.textPositions[pageNumber]) {
-      this.textPositions[pageNumber] = [];
+        this.textPositions[pageNumber] = [];
     }
 
     textContent.items.forEach((item: any) => {
-      const itemX = item.transform[4];
-      const itemY = item.transform[5];
-      this.textPositions[pageNumber].push({ x: itemX, y: itemY });
+        const itemX = item.transform[4];
+        const itemY = item.transform[5];
+        const itemText = item.str;
+
+        this.textPositions[pageNumber].push({ x: itemX, y: itemY, text: itemText });
     });
   }
 
@@ -235,7 +252,6 @@ export class PdfExcelComponent {
 
     this.isDownloading = true;
     this.downloadProgress = 0;
-1
     try {
       await this.findAllCodes(this.pdfjsDoc);
 
@@ -245,7 +261,7 @@ export class PdfExcelComponent {
       for (let i = 0; i < total; i++) {
         const row = this.data[i];
         const codigo = row['CODIGO_INTERNET'];
-        const valores = [row['Diez'], row['Veinte'], row['Treinta'], row['Cuarenta'], row['Cincuenta'], row['Sesenta'], row['Setenta']];
+        const valores = [row[this.selectedColumn]];
 
         await this.findWordAndModifyPDF(this.pdfDoc, codigo, valores, {
           margenX: 10,
@@ -281,65 +297,35 @@ export class PdfExcelComponent {
 
   async findAllCodes(pdfjsDoc: any) {
     const numPages = pdfjsDoc.numPages;
-
     const validCodes = this.data.map((row) => row['CODIGO_INTERNET'].toString().trim().toUpperCase());
-
+    const foundCodes: { codigo: string, page: number, x: number, y: number }[] = [];
 
     for (let pageIndex = 0; pageIndex < numPages; pageIndex++) {
-      const page = await pdfjsDoc.getPage(pageIndex + 1);
-      const textContent = await page.getTextContent();
+        const page = await pdfjsDoc.getPage(pageIndex + 1);
+        const textContent = await page.getTextContent();
 
-      textContent.items.forEach((item: any, index: number, array: any[]) => {
-        let codigo = item.str.trim().toUpperCase();
+        textContent.items.forEach((item: any) => {
+            let codigo = item.str.trim().toUpperCase();
 
-        if (codigo.startsWith("CÓDIGO INTERNET:")) {
-          codigo = codigo.replace("CÓDIGO INTERNET:", "").trim();
-        }
-
-        if (validCodes.includes(codigo) && !this.codeCoordsCache[codigo]) {
-          this.codeCoordsCache[codigo] = {
-            x: item.transform[4],
-            y: item.transform[5],
-            page: pageIndex + 1,
-          };
-
-
-
-          let nextY = item.transform[5];
-          for (let i = index + 1; i < array.length; i++) {
-            let nextItem = array[i];
-            const nextWord = nextItem.str.trim();
-
-
-            if (nextItem.transform[5] !== nextY) {
-              nextY = nextItem.transform[5];
-              if (this.isAreaFree(pageIndex + 1, nextItem.transform[4], nextY - 15, 12)) {
-                this.codeCoordsCache[codigo].y = nextY - 15;
-                break;
-              } else {
-                while (i < array.length && Math.abs(nextItem.transform[5] - nextY) <= 15) {
-                  i++;
-                  if (i < array.length) {
-                    nextItem = array[i];
-
-                    if (nextItem.transform[5] !== nextY) {
-                      nextY = nextItem.transform[5];
-                      if (this.isAreaFree(pageIndex + 1, nextItem.transform[4], nextY - 15, 12)) {
-                        this.codeCoordsCache[codigo].y = nextY - 15;
-                        break;
-                      }
-                    }
-                  }
-                }
-              }
+            if (codigo.startsWith("CÓDIGO INTERNET:")) {
+                codigo = codigo.replace("CÓDIGO INTERNET:", "").trim();
             }
-          }
-        }
-      });
-      await this.isTextPresent(pageIndex + 1);
+
+            if (validCodes.includes(codigo) && !this.codeCoordsCache[codigo]) {
+                this.codeCoordsCache[codigo] = {
+                    x: item.transform[4],
+                    y: item.transform[5],
+                    page: pageIndex + 1,
+                };
+
+                foundCodes.push({ codigo, page: pageIndex + 1, x: item.transform[4], y: item.transform[5] });
+            }
+        });
+        await this.isTextPresent(pageIndex + 1);
     }
 
-  }
+    return foundCodes;
+}
 
   async findWordAndModifyPDF(
     pdfDoc: PDFDocument,
@@ -348,18 +334,9 @@ export class PdfExcelComponent {
     config: { margenX: number; margenY: number; espacioEntreLineas: number; tamanioFuente: number }
   ) {
 
-
-    const foundCoords = this.codeCoordsCache[codigo];
-    if (foundCoords) {
-
-      if (!this.isPositionOccupied(foundCoords.page, foundCoords.x, foundCoords.y)) {
-        await this.drawPrices(pdfDoc, foundCoords, valores, config);
-        this.positionPrice(foundCoords.page, foundCoords.x, foundCoords.y, codigo);
-      } else {
-        console.warn(`Posición ocupada para el código "${codigo}".`);
-      }
-    } else {
-      console.warn(`El código "${codigo}" no se encuentra en el caché.`);
+    if (this.codeCoordsCache[codigo] != undefined) {
+      const foundCoords = this.codeCoordsCache[codigo];
+      await this.drawPrices(pdfDoc, foundCoords, valores, config);
     }
   }
 
